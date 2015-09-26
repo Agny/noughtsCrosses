@@ -44,6 +44,23 @@ object Index extends JSApp {
     makeTurn(event)
     true
   }
+
+  def elementValueSignal(cell: DisplayObject,
+                         getValue: () => String): Signal[String] = {
+    var prevVal = getValue()
+    val value = new Var(prevVal)
+    val onClick = { (e: Object) =>
+      // Reconstruct manually the optimization at the root of the graph
+      val newVal = getValue()
+      if (newVal != prevVal) {
+        prevVal = newVal
+        value() = newVal
+      }
+      true
+    }
+    cell.addEventListener("click", onClick)
+    value
+  }
   
   private def makeTurn(event:MouseEvent) = {
     val cont = event.currentTarget.cast[Container]
@@ -67,7 +84,7 @@ object Index extends JSApp {
 
   private def getContainer(x:Double, y:Double) = {
     val cell = new Container
-    cell.name = s"${(x / side).toInt}-${(y / side).toInt}"
+    cell.name = s"${(x / side).toInt}${Context.formatSplit}${(y / side).toInt}"
     cell.x = x + pixelBorder
     cell.y = y + pixelBorder
     cell
@@ -77,14 +94,13 @@ object Index extends JSApp {
 class Context {
   private var currentTurn:Turn = TurnZero()
   private val board = Array.ofDim[Turn](3,3)
-  private val formatSplit = "-"
   def handleAndGet(pos:String):Turn = {
     checkMap(pos)
     currentTurn
   }
 
   private def checkMap(pos:String):Boolean = {
-    val p = pos.split(formatSplit)
+    val p = pos.split(Context.formatSplit)
     val x = p(0).toInt
     val y = p(1).toInt
     board(x)(y) match {
@@ -103,6 +119,7 @@ class Context {
 
 object Context {
   private val context = new Context()
+  val formatSplit = "-"
   def get(pos:String) = context.handleAndGet(pos)
   def checkPos(pos:String) = context.checkMap(pos)
 }
