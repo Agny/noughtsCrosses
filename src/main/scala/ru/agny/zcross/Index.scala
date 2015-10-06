@@ -11,6 +11,7 @@ object Index extends JSApp {
   val size = 3
   val side = maxW / size
   val pixelBorder = 0.5
+  val formatSplit = "-"
   lazy val stage = new Stage("canvas")
   lazy val g = new Graphics
 
@@ -20,7 +21,10 @@ object Index extends JSApp {
 
   def setupUI(): Unit = {
     val cells = generateCells()
-    cells.map(c => c.addEventListener("click", (e: Object) => clickCell(e)))
+    cells.map(c => c.addEventListener("click", (e: Object) => {
+      c.removeAllEventListeners("click")
+      clickCell(e)
+    }))
     stage.addChild(cells: _*)
     stage.update()
   }
@@ -32,7 +36,7 @@ object Index extends JSApp {
       x <- 1 until maxW by maxW / size;
       y <- 1 until maxH by maxH / size
     ) yield {
-      val cell = getContainer(x,y)
+      val cell = getContainer(x, y)
       val shape = new Shape(g.beginFill("white").drawRect(0, 0, side, side))
       cell.addChild(shape)
       cell
@@ -45,46 +49,27 @@ object Index extends JSApp {
     true
   }
 
-  def elementValueSignal(cell: DisplayObject,
-                         getValue: () => String): Signal[String] = {
-    var prevVal = getValue()
-    val value = new Var(prevVal)
-    val onClick = { (e: Object) =>
-      // Reconstruct manually the optimization at the root of the graph
-      val newVal = getValue()
-      if (newVal != prevVal) {
-        prevVal = newVal
-        value() = newVal
-      }
-      true
-    }
-    cell.addEventListener("click", onClick)
-    value
-  }
-  
-  private def makeTurn(event:MouseEvent) = {
+  private def makeTurn(event: MouseEvent) = {
     val cont = event.currentTarget.cast[Container]
-    val pos = cont.name
-    if (Context.checkPos(pos)) {
-      val text = new Text(Context.get(pos).v, "", "black")
-      text.x = event.localX
-      text.y = event.localY
-      cont.addChild(text)
-      draw()
+    val Array(x, y) = cont.name.split(formatSplit)
+    val text = new Text(Context.turn(x.toInt, y.toInt).v, "", "black")
+    text.x = event.localX
+    text.y = event.localY
+    cont.addChild(text)
+    draw()
 
-      def draw(): Unit = {
-        val scale = 10
-        val tweenCfg = TextOptions((side - text.getMeasuredWidth() * scale) / 2, (side - text.getMeasuredHeight() * (scale + 1)) / 2, scale, scale)
-        new Tween(text).to(tweenCfg, 200).call((tw: Tween) => {})
-        Ticker.setFPS(20)
-        Ticker.addEventListener("tick", stage)
-      }
+    def draw(): Unit = {
+      val scale = 10
+      val tweenCfg = TextOptions((side - text.getMeasuredWidth() * scale) / 2, (side - text.getMeasuredHeight() * (scale + 1)) / 2, scale, scale)
+      new Tween(text).to(tweenCfg, 200).call((tw: Tween) => {})
+      Ticker.setFPS(20)
+      Ticker.addEventListener("tick", stage)
     }
   }
 
-  private def getContainer(x:Double, y:Double) = {
+  private def getContainer(x: Double, y: Double) = {
     val cell = new Container
-    cell.name = s"${(x / side).toInt}${Context.formatSplit}${(y / side).toInt}"
+    cell.name = s"${(x / side).toInt}${formatSplit}${(y / side).toInt}"
     cell.x = x + pixelBorder
     cell.y = y + pixelBorder
     cell
@@ -92,43 +77,32 @@ object Index extends JSApp {
 }
 
 class Context {
-  private var currentTurn:Turn = TurnZero()
-  private val board = Array.ofDim[Turn](3,3)
-  def handleAndGet(pos:String):Turn = {
-    checkMap(pos)
-    currentTurn
+  private var crosses = Seq[Cross]()
+  private var zeros = Seq[Zero]()
+  private var duos = Seq[Duo[Cell]]()
+
+  def turn(x: Int, y: Int): DisplayCell = {
+    Cursor.next(x, y)
+    //some logic processing
   }
 
-  private def checkMap(pos:String):Boolean = {
-    val p = pos.split(Context.formatSplit)
-    val x = p(0).toInt
-    val y = p(1).toInt
-    board(x)(y) match {
-      case t:Turn =>
-        false
-      case _ =>
-        currentTurn match {
-          case x:TurnCross => currentTurn = TurnZero()
-          case z:TurnZero => currentTurn = TurnCross()
-        }
-        board(x)(y) = currentTurn
-        true
+  object Cursor {
+    private val turn = Seq(Zero, Cross)
+    private var i = 0
+
+    def next(x: Int, y: Int) = {
+      i = i + 1
+      turn(i % 2)(x, y)
     }
   }
+
 }
 
 object Context {
   private val context = new Context()
-  val formatSplit = "-"
-  def get(pos:String) = context.handleAndGet(pos)
-  def checkPos(pos:String) = context.checkMap(pos)
-}
 
-// think about value classes
-class Turn(val v:String) {
+  def turn(x: Int, y: Int) = context.turn(x, y)
 }
-case class TurnCross() extends Turn("X")
-case class TurnZero() extends Turn("O")
 
 trait TextOptions extends js.Object {
   val x: Double = js.native
