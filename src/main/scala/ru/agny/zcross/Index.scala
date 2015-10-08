@@ -69,7 +69,7 @@ object Index extends JSApp {
 
   private def getContainer(x: Double, y: Double) = {
     val cell = new Container
-    cell.name = s"${(x / side).toInt}${formatSplit}${(y / side).toInt}"
+    cell.name = s"${(x / side).toInt}$formatSplit${(y / side).toInt}"
     cell.x = x + pixelBorder
     cell.y = y + pixelBorder
     cell
@@ -79,11 +79,38 @@ object Index extends JSApp {
 class Context {
   private var crosses = Seq[Cross]()
   private var zeros = Seq[Zero]()
-  private var duos = Seq[Duo[Cell]]()
+  private var duocr = Seq[Duo[Cross]]()
+  private var duozr = Seq[Duo[Zero]]()
 
   def turn(x: Int, y: Int): DisplayCell = {
-    Cursor.next(x, y)
-    //some logic processing
+    val cell = Cursor.next(x, y)
+    cell match {
+      case c: Cross =>
+        crosses.foreach(cr => if (cr.relatesTo(c)) {
+          duocr = duocr :+ Duo(cr, c)
+        })
+        crosses = crosses :+ c
+
+        for(d1 <- duocr; d2 <- duocr) {
+          if (d1.relatesTo(d2)) {
+            println(d1 +" + " + d2)
+            println("Lyuto win")
+          }
+        }
+      case z: Zero =>
+        zeros.foreach(zr => if (zr.relatesTo(z)) {
+          duozr = duozr :+ Duo(zr, z)
+        })
+        zeros = zeros :+ z
+
+        for(d1 <- duozr; d2 <- duozr) {
+          if (d1.relatesTo(d2)) {
+            println(d1 +" + " + d2)
+            println("Lyuto win")
+          }
+        }
+    }
+    cell
   }
 
   object Cursor {
