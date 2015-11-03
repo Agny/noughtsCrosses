@@ -7,40 +7,18 @@ import com.scalawarrior.scalajs.createjs._
 import org.scalajs.dom.ext._
 
 object Index extends JSApp {
-  val maxW, maxH = 400
-  val size = 3
-  val side = maxW / size
-  val pixelBorder = 0.5
-  val formatSplit = "-"
-  lazy val stage = new Stage("canvas")
-  lazy val g = new Graphics
 
   def main(): Unit = {
     jQuery(setupUI _)
   }
 
   def setupUI(): Unit = {
-    val cells = generateCells()
+    val cells = Graphics.generateCells()
     cells.map(c => c.addEventListener("click", (e: Object) => {
       c.removeAllEventListeners("click")
       clickCell(e)
     }))
-    stage.addChild(cells: _*)
-    stage.update()
-  }
-
-  private def generateCells(): Seq[DisplayObject] = {
-    g.setStrokeStyle(1)
-    g.beginStroke("black")
-    for (
-      x <- 1 until maxW by maxW / size;
-      y <- 1 until maxH by maxH / size
-    ) yield {
-      val cell = getContainer(x, y)
-      val shape = new Shape(g.beginFill("white").drawRect(0, 0, side, side))
-      cell.addChild(shape)
-      cell
-    }
+    Graphics.addToStage(cells)
   }
 
   private def clickCell(e: Object): Boolean = {
@@ -50,30 +28,9 @@ object Index extends JSApp {
   }
 
   private def makeTurn(event: MouseEvent) = {
-    val cont = event.currentTarget.cast[Container]
-    val Array(x, y) = cont.name.split(formatSplit)
-    val text = new Text(Context.turn(x.toInt, y.toInt).v, "", "black")
-    text.x = event.localX
-    text.y = event.localY
-    cont.addChild(text)
-    draw()
-
-    def draw(): Unit = {
-      val scale = 10
-      val tweenCfg = TextOptions((side - text.getMeasuredWidth() * scale) / 2, (side - text.getMeasuredHeight() * (scale + 1)) / 2, scale, scale)
-      new Tween(text).to(tweenCfg, 200).call((tw: Tween) => {})
-      Ticker.setFPS(20)
-      Ticker.addEventListener("tick", stage)
-    }
+    Graphics.drawText(event)
   }
 
-  private def getContainer(x: Double, y: Double) = {
-    val cell = new Container
-    cell.name = s"${(x / side).toInt}$formatSplit${(y / side).toInt}"
-    cell.x = x + pixelBorder
-    cell.y = y + pixelBorder
-    cell
-  }
 }
 
 class Context {
@@ -93,6 +50,7 @@ class Context {
 
         for(d1 <- duocr; d2 <- duocr) {
           if (d1.relatesTo(d2)) {
+            Graphics.drawLine(d1.c1, d2.c2)
             println(d1 +" + " + d2)
             println("Lyuto win")
           }
@@ -105,6 +63,7 @@ class Context {
 
         for(d1 <- duozr; d2 <- duozr) {
           if (d1.relatesTo(d2)) {
+            Graphics.drawLine(d1.c1, d2.c2)
             println(d1 +" + " + d2)
             println("Lyuto win")
           }
