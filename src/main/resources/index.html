@@ -3,9 +3,18 @@
 <head>
 	<meta charset="UTF-8">
 	<title>The Scala.js Tutorial</title>
+	<style>
+		#background {
+			position: absolute;
+			left: 8px;
+			top: 8px;
+			pointer-events: none;
+		}
+	</style>
 </head>
 <body>
-<canvas id="canvas" width="700" height="700"></canvas>
+<canvas id="main" width="700" height="700"></canvas>
+<canvas id="background" width="700" height="700"></canvas>
 <script src="https://code.createjs.com/createjs-2015.05.21.min.js"></script>
 <script type="text/javascript" src="./target/scala-2.11/zerocross-fastopt.js"></script>
 <script type="text/javascript" src="./target/scala-2.11/zerocross-jsdeps.js"></script>

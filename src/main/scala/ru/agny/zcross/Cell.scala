@@ -1,5 +1,9 @@
 package ru.agny.zcross
 
+import ru.agny.zcross.utils.PropertiesHolder
+
+import scala.collection.mutable
+
 class Cell(val x: Int, val y: Int) {
   private lazy val adjacent = {
     val r1 = Range(x - 1, x + 2)
@@ -29,21 +33,42 @@ case class Cross(override val x: Int, override val y: Int) extends DisplayCell("
 
 case class Zero(override val x: Int, override val y: Int) extends DisplayCell("O", x, y)
 
-case class Duo[A <: Cell](c1: A, c2: A) {
-  private val relations = Map(
-    c1 -> ((dx: Int, dy: Int) => dx == c1.x - c2.x & dy == c1.y - c2.y),
-    c2 -> ((dx: Int, dy: Int) => dx == c2.x - c1.x & dy == c2.y - c1.y)
+case class Line[A <: Cell](c1: A, c2 : A) {
+  private val left = "left"
+  private val right = "right"
+  private val maxLength = 3 //PropertiesHolder.lineSize doesn't implemented in scala js yet
+  private val innerLine = mutable.MutableList[A](c1, c2)
+  private val relations = mutable.Map(
+    left -> ((dx: Int, dy: Int) => dx == innerLine.head.x - innerLine.tail.head.x &
+      dy == innerLine.head.y - innerLine.tail.head.y),
+    right -> ((dx: Int, dy: Int) => dx == innerLine.tail.head.x - innerLine.head.x &
+      dy == innerLine.tail.head.y - innerLine.head.y)
   )
 
-  def relatesTo(c3: A): Boolean = {
-    c1.relatesBy(c3, relations(c1)) | c2.relatesBy(c3, relations(c2))
+  def checkRelation(c3: A) = {
+    if (innerLine.head.relatesBy(c3, relations(left))) {
+      innerLine.+=:(c3)
+      true
+    } else if (innerLine.last.relatesBy(c3, relations(right))) {
+      innerLine += c3
+      true
+    } else
+      false
   }
 
-  def relatesTo(other: Duo[A]): Boolean = {
-    relatesTo(other.c1) | relatesTo(other.c2)
+  def checkRelation(other: Line[A]): Boolean = {
+    checkRelation(other.innerLine.head) | checkRelation(other.innerLine.last)
+  }
+
+  def isLongEnough = {
+    innerLine.length == maxLength
+  }
+
+  def values = {
+    innerLine.toList
   }
 
   override def toString: String = {
-    s"$c1->$c2"
+    s"$innerLine.head->$innerLine.last"
   }
 }
