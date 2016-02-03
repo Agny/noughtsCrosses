@@ -17,7 +17,7 @@ import scalafx.scene.paint.Color
 
 object Graphics extends JFXApp with GraphicsT {
 
-  private val borderSide = 600
+  private val borderSide = PropertiesHolder.borderSide
   private val boardSize = PropertiesHolder.boardSize
   private val cellSide = borderSide / boardSize
 

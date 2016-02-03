@@ -36,7 +36,7 @@ case class Zero(override val x: Int, override val y: Int) extends DisplayCell("O
 case class Line[A <: Cell](c1: A, c2 : A) {
   private val left = "left"
   private val right = "right"
-  private val maxLength = 3 //PropertiesHolder.lineSize doesn't implemented in scala js yet
+  private val maxLength = PropertiesHolder.lineSize
   private val innerLine = mutable.MutableList[A](c1, c2)
   private val relations = mutable.Map(
     left -> ((dx: Int, dy: Int) => dx == innerLine.head.x - innerLine.tail.head.x &

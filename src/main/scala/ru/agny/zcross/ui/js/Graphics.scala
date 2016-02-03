@@ -15,8 +15,8 @@ class Graphics extends GraphicsT {
   private val pixelBorder = 0.5
   private val pixelShift = 20
   private val formatSplit = "-"
-  private val borderSide = 400
-  private val boardSize = 3 //PropertiesHolder.boardSize doesn't implemented in scala js yet
+  private val borderSide = PropertiesHolder.borderSide
+  private val boardSize = PropertiesHolder.boardSize
   private val cellSide = borderSide / boardSize
   private val backShapeName = "backShape"
 
