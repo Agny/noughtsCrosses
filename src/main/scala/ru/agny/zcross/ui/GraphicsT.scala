@@ -1,10 +1,12 @@
 package ru.agny.zcross.ui
 
-import ru.agny.zcross.Cell
+import ru.agny.zcross.{DisplayCell, CellView}
 
 trait GraphicsT {
 
-  def drawLine(from: Cell, to: Cell)
+  def drawTurn(cell: DisplayCell)
+
+  def drawLine(from: CellView, to: CellView)
 
   def reload()
 

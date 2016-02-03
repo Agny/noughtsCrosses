@@ -1,8 +1,9 @@
 package ru.agny.zcross.ui.desktop
 
+import ru.agny.zcross.engine.AI
 import ru.agny.zcross.ui.GraphicsT
-import ru.agny.zcross.utils.{PropertiesHolder, GraphicsUtil}
-import ru.agny.zcross.{Cell, Context}
+import ru.agny.zcross.utils.{GraphicsUtil, PropertiesHolder}
+import ru.agny.zcross.{CellView, Context, DisplayCell}
 
 import scala.collection.mutable
 import scalafx.Includes._
@@ -22,13 +23,15 @@ object Graphics extends JFXApp with GraphicsT {
   private val cellSide = borderSide / boardSize
 
   private var context:Context = null
-  private var coordsToCell:mutable.Map[(Int, Int), Container] = null
-  private var canvas:Canvas = null
-  private var gc:GraphicsContext = null
+  private var AI = new AI(context)
+  private var coordsToCell: mutable.Map[(Int, Int), CellView] = null
+  private var canvas: Canvas = null
+  private var gc: GraphicsContext = null
 
   private def setup() = {
     context = new Context(this)
-    coordsToCell = mutable.Map.empty[(Int, Int), Container]
+    AI = new AI(context)
+    coordsToCell = mutable.Map.empty[(Int, Int), CellView]
     canvas = new Canvas(borderSide + 100, borderSide + 100)
     gc = canvas.graphicsContext2D
     stage = new PrimaryStage {
@@ -42,7 +45,9 @@ object Graphics extends JFXApp with GraphicsT {
             canvas,
             new Button {
               text = "Reload"
-              onAction = handle {reload()}
+              onAction = handle {
+                reload()
+              }
             }
           )
         }
@@ -54,7 +59,15 @@ object Graphics extends JFXApp with GraphicsT {
 
   setup()
 
-  override def drawLine(from: Cell, to: Cell): Unit = {
+  override def drawTurn(cell: DisplayCell): Unit = {
+    val c = coordsToCell.find(x => x._2.x == cell.x & x._2.y == cell.y).get
+    if (!c._2.isSet) {
+      c._2.isSet = true
+      gc.strokeText(cell.v, c._1._1, c._1._2)
+    }
+  }
+
+  override def drawLine(from: CellView, to: CellView): Unit = {
     val centerFromX = from.x * cellSide + cellSide / 2
     val centerFromY = from.y * cellSide + cellSide / 2
     val centerToX = to.x * cellSide + cellSide / 2
@@ -74,6 +87,7 @@ object Graphics extends JFXApp with GraphicsT {
 
   override def reload(): Unit = {
     setup()
+    AI.clear()
   }
 
   private def drawShapes(gc: GraphicsContext) = {
@@ -90,7 +104,7 @@ object Graphics extends JFXApp with GraphicsT {
         y <- 1 until borderSide by cellSide
       ) yield {
         gc.strokeRect(x, y, cellSide, cellSide)
-        coordsToCell += ((x + cellSide / 2, y + cellSide / 2) -> new Container(x / cellSide, y / cellSide))
+        coordsToCell += ((x + cellSide / 2, y + cellSide / 2) -> new CellView(x / cellSide, y / cellSide))
       }
     }
     generate
@@ -108,10 +122,11 @@ object Graphics extends JFXApp with GraphicsT {
       val code = context.turn(cell.x, cell.y)
       gc.strokeText(code.v, mouseX, mouseY)
       cell.isSet = true
+      AI.makeTurn(cell)
     }
   }
 
-  private def getCell(x: Double, y: Double): Container = {
+  private def getCell(x: Double, y: Double): CellView = {
     coordsToCell.find(c => ifWithinCell(c._1._1, x) && ifWithinCell(c._1._2, y)).get._2
   }
 
@@ -119,8 +134,4 @@ object Graphics extends JFXApp with GraphicsT {
     val maxDistance = cellSide / 2
     Math.abs(cellCenter - click) <= maxDistance
   }
-}
-
-case class Container(x: Int, y: Int) {
-  var isSet = false
 }

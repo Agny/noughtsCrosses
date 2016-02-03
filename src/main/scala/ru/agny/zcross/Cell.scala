@@ -4,7 +4,7 @@ import ru.agny.zcross.utils.PropertiesHolder
 
 import scala.collection.mutable
 
-class Cell(val x: Int, val y: Int) {
+class Cell(x: Int, y: Int) extends CellView(x, y) {
   private lazy val adjacent = {
     val r1 = Range(x - 1, x + 2)
     val r2 = Range(y - 1, y + 2)
@@ -33,7 +33,7 @@ case class Cross(override val x: Int, override val y: Int) extends DisplayCell("
 
 case class Zero(override val x: Int, override val y: Int) extends DisplayCell("O", x, y)
 
-case class Line[A <: Cell](c1: A, c2 : A) {
+case class Line[A <: Cell](c1: A, c2: A) {
   private val left = "left"
   private val right = "right"
   private val maxLength = PropertiesHolder.lineSize

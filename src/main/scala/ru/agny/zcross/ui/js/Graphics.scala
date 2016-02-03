@@ -2,9 +2,12 @@ package ru.agny.zcross.ui.js
 
 import com.scalawarrior.scalajs.createjs.{Graphics => CreateJS, _}
 import org.scalajs.dom.ext._
+import ru.agny.zcross._
+import ru.agny.zcross.engine.AI
 import ru.agny.zcross.ui.GraphicsT
-import ru.agny.zcross.utils.{PropertiesHolder, GraphicsUtil}
-import ru.agny.zcross.{Cell, Context, TextOptions}
+import ru.agny.zcross.utils.{GraphicsUtil, PropertiesHolder}
+
+import scala.collection.mutable
 
 class Graphics extends GraphicsT {
 
@@ -19,9 +22,10 @@ class Graphics extends GraphicsT {
   private val boardSize = PropertiesHolder.boardSize
   private val cellSide = borderSide / boardSize
   private val backShapeName = "backShape"
+  private val AI = new AI(context)
+  private var cells: mutable.Map[(Int, Int), Container] = null
 
   private def init(): Unit = {
-
     val boardShape = new Shape(g.drawRect(0, 0, 500, 500))
     boardShape.name = backShapeName
     background.addChild(boardShape)
@@ -36,8 +40,33 @@ class Graphics extends GraphicsT {
 
   init()
 
+  def setupUI(): Unit = {
+    val cells = generateCells()
+    cells.map(c => c.addEventListener("click", (e: Object) => {
+      c.removeAllEventListeners("click")
+      clickCell(e)
+    }))
+    addToStage(cells)
+  }
 
-  override def drawLine(from: Cell, to: Cell) = {
+  override def drawTurn(cell: DisplayCell): Unit = {
+    val text = new Text(cell.v, "", "black")
+    text.x = cell.x * cellSide + cellSide / 2
+    text.y = cell.y * cellSide + cellSide / 2
+    val container = cells(cell.x, cell.y)
+    container.addChild(text)
+    container.removeAllEventListeners("click")
+    draw()
+
+    def draw(): Unit = {
+      val scale = 10
+      val tweenCfg = TextOptions((cellSide - text.getMeasuredWidth() * scale) / 2, (cellSide - text.getMeasuredHeight() * (scale + 1)) / 2, scale, scale)
+      new Tween(text).to(tweenCfg, 200).call((tw: Tween) => {})
+    }
+
+  }
+
+  override def drawLine(from: CellView, to: CellView) = {
     val backShape = background.getChildByName(backShapeName).cast[Shape].graphics
     backShape.setStrokeStyle(2)
     backShape.beginStroke("red")
@@ -50,9 +79,9 @@ class Graphics extends GraphicsT {
     if (from.y == to.y) {
       backShape.moveTo((from.x + shiftX._1) * cellSide + startBoundaryX, from.y * cellSide + cellSide / 2)
       backShape.lineTo((to.x + shiftX._2) * cellSide + endBoundaryX, to.y * cellSide + cellSide / 2)
-    } else if (from.x == to.x){
+    } else if (from.x == to.x) {
       backShape.moveTo(from.x * cellSide + cellSide / 2, (from.y + shiftY._1) * cellSide + startBoundaryY)
-      backShape.lineTo(to.x * cellSide + cellSide / 2, (to.y + shiftY._2) * cellSide - endBoundaryY)
+      backShape.lineTo(to.x * cellSide + cellSide / 2, (to.y + shiftY._2) * cellSide + endBoundaryY)
     } else {
       backShape.moveTo((from.x + shiftX._1) * cellSide + startBoundaryX, (from.y + shiftY._1) * cellSide + startBoundaryY)
       backShape.lineTo((to.x + shiftX._2) * cellSide + endBoundaryX, (to.y + shiftY._2) * cellSide + endBoundaryY)
@@ -65,15 +94,6 @@ class Graphics extends GraphicsT {
 
   }
 
-  def setupUI(): Unit = {
-    val cells = generateCells()
-    cells.map(c => c.addEventListener("click", (e: Object) => {
-      c.removeAllEventListeners("click")
-      clickCell(e)
-    }))
-    addToStage(cells)
-  }
-
   private def clickCell(e: Object): Boolean = {
     val event = e.cast[MouseEvent]
     drawText(event)
@@ -83,7 +103,8 @@ class Graphics extends GraphicsT {
   private def drawText(event: MouseEvent) = {
     val cont = event.currentTarget.cast[Container]
     val Array(x, y) = cont.name.split(formatSplit)
-    val text = new Text(context.turn(x.toInt, y.toInt).v, "", "black")
+    val turn = context.turn(x.toInt, y.toInt)
+    val text = new Text(turn.v, "", "black")
     text.x = event.localX
     text.y = event.localY
     cont.addChild(text)
@@ -94,15 +115,17 @@ class Graphics extends GraphicsT {
       val tweenCfg = TextOptions((cellSide - text.getMeasuredWidth() * scale) / 2, (cellSide - text.getMeasuredHeight() * (scale + 1)) / 2, scale, scale)
       new Tween(text).to(tweenCfg, 200).call((tw: Tween) => {})
     }
+    AI.makeTurn(turn)
   }
 
   private def generateCells(): Seq[DisplayObject] = {
+    cells = mutable.Map.empty[(Int, Int), Container]
     val generate = {
       for (
         x <- 1 until borderSide by cellSide;
         y <- 1 until borderSide by cellSide
       ) yield {
-        val cell = getContainer(x, y)
+        val cell = createContainer(x, y)
         val shape = new Shape()
         shape.graphics.setStrokeStyle(1)
         shape.graphics.beginStroke("black")
@@ -110,6 +133,7 @@ class Graphics extends GraphicsT {
         shape.graphics.drawRect(0, 0, cellSide, cellSide)
         shape.graphics.endStroke()
         cell.addChild(shape)
+        cells += (x / cellSide, y / cellSide) -> cell
         cell
       }
     }
@@ -125,7 +149,7 @@ class Graphics extends GraphicsT {
   //    res
   //  }
 
-  private def getContainer(x: Double, y: Double) = {
+  private def createContainer(x: Double, y: Double) = {
     val cell = new Container
     cell.name = s"${(x / cellSide).toInt}$formatSplit${(y / cellSide).toInt}"
     cell.x = x + pixelBorder

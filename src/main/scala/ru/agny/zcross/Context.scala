@@ -3,7 +3,7 @@ package ru.agny.zcross
 import ru.agny.zcross.ui.GraphicsT
 
 
-class Context(g:GraphicsT) {
+class Context(val g:GraphicsT) {
   private var crosses = Seq[Cross]()
   private var zeros = Seq[Zero]()
   private var duocr = Seq[Line[Cross]]()
