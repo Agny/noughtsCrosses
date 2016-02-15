@@ -1,23 +1,186 @@
 <!DOCTYPE html>
 <html>
 <head>
-	<meta charset="UTF-8">
-	<title>The Scala.js Tutorial</title>
-	<style>
-		#background {
-			position: absolute;
-			left: 8px;
-			top: 8px;
-			pointer-events: none;
-		}
-	</style>
+  <meta charset="UTF-8">
+  <title>The CreateJs Tutorial</title>
+  <style>
+    #background {
+      position: absolute;
+      left: 8px;
+      top: 8px;
+      pointer-events: none;
+    }
+  </style>
+  <script type="text/javascript">
+    "use strict";
+
+    const borderSide = 600;
+    const boardSize = 5;
+    const cellSide = Math.floor(borderSide / boardSize);
+    const backShapeName = "backShape";
+    const pixelBorder = 0.5;
+    const lineAppendix = 20;
+    const formatSplitBy = "-";
+    const cells = {};
+
+    let main;
+    let background;
+    let board;
+
+    function init() {
+      main = new createjs.Stage("main");
+      background = new createjs.Stage("background");
+      board = new createjs.Shape();
+      board.name = backShapeName;
+      board.graphics.drawRect(0, 0, 500, 500);
+      background.addChild(board);
+      background.addEventListener("click", function (e) {
+        background.removeAllEventListeners("click");
+        background.dispatchEvent(e);
+      });
+      createjs.Ticker.setFPS(50);
+      createjs.Ticker.addEventListener("tick", main);
+
+      setup(main)
+    }
+
+    function setup(mainStage) {
+      const user = "player1";
+      const room = 1;
+      const socket = new WebSocket("ws://192.168.1.34:8080/ws-chat/" + room + "?name=" + user);
+      socket.onmessage = function (e) {
+        const msg = JSON.parse(e.data);
+        switch (msg.type) {
+          case "cell":
+            drawCellValue(msg);
+            break;
+          case "line":
+            drawLine(msg.from, msg.to);
+            break;
+          case "result":
+            drawPopup(msg, user);
+            break;
+        }
+      };
+      const cells = generateCells();
+      for (let x = 0; x < boardSize; x++) {
+        for (let y = 0; y < boardSize; y++) {
+          const c = cells[getAddress(x, y)];
+          c.addEventListener("click", function (e) {
+            const container = e.currentTarget;
+            const xy = container.name.split(formatSplitBy);
+            socket.send(JSON.stringify({
+              x: parseInt(xy[0]),
+              y: parseInt(xy[1])
+            }));
+          });
+          mainStage.addChild(c)
+        }
+      }
+    }
+
+    function generateCells() {
+      for (let x = 1; x < borderSide; x += cellSide) {
+        for (let y = 1; y < borderSide; y += cellSide) {
+          const cell = new createjs.Container();
+          const address = positionToAddress(x, y);
+          cell.name = address;
+          cell.x = x + pixelBorder;
+          cell.y = y + pixelBorder;
+
+          const shape = new createjs.Shape();
+          shape.graphics.setStrokeStyle(1);
+          shape.graphics.beginStroke("black");
+          shape.graphics.beginFill("white");
+          shape.graphics.drawRect(0, 0, cellSide, cellSide);
+          shape.graphics.endStroke();
+
+          cell.addChild(shape);
+          cells[address] = cell
+        }
+      }
+      return cells;
+    }
+
+    function drawCellValue(cell) {
+      const text = new createjs.Text(cell.v, "", "black");
+      text.x = getCenter(cell.x);
+      text.y = getCenter(cell.y);
+      const container = cells[getAddress(cell.x, cell.y)];
+      container.addChild(text);
+      container.removeAllEventListeners("click");
+      draw();
+
+      function draw() {
+        const scale = 12;
+        const tweenCfg = {
+          x: (cellSide - text.getMeasuredWidth() * scale) / 2,
+          y: (cellSide - text.getMeasuredHeight() * (scale + 1)) / 2,
+          scaleX: scale,
+          scaleY: scale
+        };
+        createjs.Tween.get(text).to(tweenCfg, 200)
+      }
+    }
+
+    function drawLine(from, to) {
+      const backShape = background.getChildByName(backShapeName).graphics;
+      backShape.setStrokeStyle(2);
+      backShape.beginStroke("red");
+      const shiftX = cellLineShift(from.x, to.x);
+      const shiftY = cellLineShift(from.y, to.y);
+      const startBoundaryX = lineBoundsShift(shiftX.start, lineAppendix);
+      const endBoundaryX = lineBoundsShift(shiftX.end, lineAppendix);
+      const startBoundaryY = lineBoundsShift(shiftY.start, lineAppendix);
+      const endBoundaryY = lineBoundsShift(shiftY.end, lineAppendix);
+      if (from.y == to.y) {
+        backShape.moveTo((from.x + shiftX.start) * cellSide + startBoundaryX, from.y * cellSide + cellSide / 2);
+        backShape.lineTo((to.x + shiftX.end) * cellSide + endBoundaryX, to.y * cellSide + cellSide / 2)
+      } else if (from.x == to.x) {
+        backShape.moveTo(from.x * cellSide + cellSide / 2, (from.y + shiftY.start) * cellSide + startBoundaryY);
+        backShape.lineTo(to.x * cellSide + cellSide / 2, (to.y + shiftY.end) * cellSide + endBoundaryY)
+      } else {
+        backShape.moveTo((from.x + shiftX.start) * cellSide + startBoundaryX, (from.y + shiftY.start) * cellSide + startBoundaryY);
+        backShape.lineTo((to.x + shiftX.end) * cellSide + endBoundaryX, (to.y + shiftY.end) * cellSide + endBoundaryY)
+      }
+      backShape.endStroke();
+      background.update()
+    }
+
+    function drawPopup(msg, user) {
+      if (msg.user === user) {
+        alert("You win. Score:" + msg.score)
+      } else {
+        alert("You loose. Score:" + msg.score)
+      }
+    }
+
+    function getCenter(coordinate) {
+      return coordinate * cellSide + cellSide / 2;
+    }
+
+    function getAddress(x, y) {
+      return x + formatSplitBy + y;
+    }
+
+    function positionToAddress(x, y) {
+      return Math.floor(x / cellSide) + formatSplitBy + Math.floor(y / cellSide);
+    }
+
+    function cellLineShift(from, to) {
+      if (from >= to) return {start: 1, end: 0};
+      else return {start: 0, end: 1};
+    }
+
+    function lineBoundsShift(length, baseShift) {
+      return Math.pow(-1, length) * baseShift;
+    }
+  </script>
 </head>
-<body>
+<body onload="init();">
 <canvas id="main" width="700" height="700"></canvas>
 <canvas id="background" width="700" height="700"></canvas>
-<script src="https://code.createjs.com/createjs-2015.05.21.min.js"></script>
-<script type="text/javascript" src="./target/scala-2.11/zerocross-fastopt.js"></script>
-<script type="text/javascript" src="./target/scala-2.11/zerocross-jsdeps.js"></script>
-<script type="text/javascript" src="./target/scala-2.11/zerocross-launcher.js"></script>
+<script src="https://code.createjs.com/createjs-2015.11.26.combined.js"></script>
+<!--<script src="https://code.createjs.com/createjs-2015.11.26.js"></script>-->
 </body>
 </html>

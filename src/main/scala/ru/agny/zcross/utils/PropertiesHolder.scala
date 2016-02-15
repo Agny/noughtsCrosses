@@ -4,17 +4,12 @@ import com.typesafe.config.ConfigFactory
 
 object PropertiesHolder {
 
-  /* Scala.js doesn't support typesafe ConfigFactory yet
-
-  val (boardSize: Int, lineSize: Int) = {
-    val conf = ConfigFactory.load("app.conf")
+  val (borderSide: Int, boardSize: Int, lineSize: Int) = {
+    val conf = ConfigFactory.load("application.conf")
     (
-      conf.getInt("boardSize"),
-      conf.getInt("lineSize")
-    )
-  }*/
-
-  val borderSide = 600
-  val boardSize = 5
-  val lineSize = 4
+      conf.getInt("game.borderSide"),
+      conf.getInt("game.boardSize"),
+      conf.getInt("game.lineSize")
+      )
+  }
 }

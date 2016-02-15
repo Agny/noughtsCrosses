@@ -3,7 +3,7 @@ package ru.agny.zcross.ui.desktop
 import ru.agny.zcross.engine.AI
 import ru.agny.zcross.ui.GraphicsT
 import ru.agny.zcross.utils.{GraphicsUtil, PropertiesHolder}
-import ru.agny.zcross.{CellView, Context, DisplayCell}
+import ru.agny.zcross.{CellView, GameContext, DisplayCell}
 
 import scala.collection.mutable
 import scalafx.Includes._
@@ -22,14 +22,14 @@ object Graphics extends JFXApp with GraphicsT {
   private val boardSize = PropertiesHolder.boardSize
   private val cellSide = borderSide / boardSize
 
-  private var context:Context = null
+  private var context:GameContext = null
   private var AI = new AI(context)
   private var coordsToCell: mutable.Map[(Int, Int), CellView] = null
   private var canvas: Canvas = null
   private var gc: GraphicsContext = null
 
   private def setup() = {
-    context = new Context(this)
+    context = new GameContext
     AI = new AI(context)
     coordsToCell = mutable.Map.empty[(Int, Int), CellView]
     canvas = new Canvas(borderSide + 100, borderSide + 100)
@@ -119,10 +119,10 @@ object Graphics extends JFXApp with GraphicsT {
   private def drawText(mouseX: Double, mouseY: Double) = {
     val cell = getCell(mouseX, mouseY)
     if (!cell.isSet) {
-      val code = context.turn(cell.x, cell.y)
-      gc.strokeText(code.v, mouseX, mouseY)
+//      val code = context.turn(cell.x, cell.y)
+//      gc.strokeText(code.v, mouseX, mouseY)
       cell.isSet = true
-      AI.makeTurn(cell)
+//      AI.makeTurn(cell)
     }
   }
 

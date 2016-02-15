@@ -1,18 +1,30 @@
 package ru.agny.zcross.engine
 
+import akka.actor.Actor
+import ru.agny.zcross.engine.messages.{CellClick, CellClickResult}
 import ru.agny.zcross.utils.PropertiesHolder
-import ru.agny.zcross.{CellView, Context}
+import ru.agny.zcross.{CellView, GameContext}
 
 import scala.util.Random
 
-class AI(ctx: Context) {
+class AI(ctx: GameContext) extends Actor {
 
   private val boardSize = PropertiesHolder.boardSize
   private var boardState = generateBoard()
 
-  def makeTurn(playerTurn: CellView) = {
+  override def receive: Receive = {
+    case "" => println("")
+//    case CellClickResult(cell) => {
+//      val (x,y) = makeTurn(cell)
+//      sender() ! CellClick(x,y)
+      //makeTurn(cell)
+//    }
+  }
+
+  private def makeTurn(playerTurn: CellView) = {
     boardState(playerTurn.x, playerTurn.y).isSet = true
-    ctx.g.drawTurn(randomTurn())
+    randomTurn()
+    //ctx.g.drawTurn(randomTurn())
   }
 
   private def randomTurn() = {
@@ -20,7 +32,8 @@ class AI(ctx: Context) {
     cell match {
       case Some(c) =>
         boardState(c.x,c.y).isSet = true
-        ctx.turn(c.x, c.y)
+        (c.x,c.y)
+        //ctx.turn(c.x, c.y)
       case None => throw new NoSuchElementException
     }
   }
@@ -29,7 +42,7 @@ class AI(ctx: Context) {
     boardState.filter(x => !x._2.isSet).values
   }
 
-  def randomize(cells: Seq[CellState], counter: Int): Option[CellState] = {
+  private def randomize(cells: Seq[CellState], counter: Int): Option[CellState] = {
     val rnd = new Random()
     cells.find(c => c.x == rnd.nextInt(boardSize) & c.y == rnd.nextInt(boardSize)) match {
       case Some(x) => Option(x)
