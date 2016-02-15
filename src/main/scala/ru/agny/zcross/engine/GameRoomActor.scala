@@ -11,12 +11,18 @@ class GameRoomActor(sessionId: Int, gameContext:ActorRef) extends Actor with akk
     case PlayerJoined(name, actorRef) =>
       log.debug(s"Player joined: $name")
       players += name -> actorRef
+      if (players.size > 1) {
+        val firstPlayers = players.take(2).keys
+        gameContext ! PlayersReady(firstPlayers.head, firstPlayers.last)
+      }
     case PlayerLeft(name) =>
       log.debug(s"Player left: $name")
       players -= name
-    case msg:GameEvent =>  msg match {
-      case msg @ CellClick(x,y) => gameContext ! msg
-      case msg @ _ => broadcast(msg)
+    case msg: GameEvent => msg match {
+      case msg@CellClick(player, x, y) => gameContext ! msg
+      case msg@_ =>
+        gameContext ! msg
+        broadcast(msg)
     }
   }
 

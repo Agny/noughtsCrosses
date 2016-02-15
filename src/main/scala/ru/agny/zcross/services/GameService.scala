@@ -9,7 +9,7 @@ object GameService extends Directives{
 
   def route(implicit actorSystem: ActorSystem, materializer: Materializer): Route = path("ws-chat" / IntNumber) { roomId =>
     parameter('name) { userName =>
-      handleWebsocketMessages(GameRooms.findOrCreate(roomId).websocketFlow(userName))
+      handleWebsocketMessages(GameRooms.findOrCreate(roomId, userName).websocketFlow(userName))
     }
   }
 }

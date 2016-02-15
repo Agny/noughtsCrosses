@@ -70,6 +70,7 @@
             const container = e.currentTarget;
             const xy = container.name.split(formatSplitBy);
             socket.send(JSON.stringify({
+              player: user,
               x: parseInt(xy[0]),
               y: parseInt(xy[1])
             }));
@@ -148,10 +149,14 @@
     }
 
     function drawPopup(msg, user) {
-      if (msg.user === user) {
-        alert("You win. Score:" + msg.score)
+      if (msg.winner === user) {
+        const score = (user != msg.score.player2 ? msg.score.player2 + ":" + msg.score.player1
+            : msg.score.player1 + ":" + msg.score.player2);
+        alert("You win. Score:" + score)
       } else {
-        alert("You loose. Score:" + msg.score)
+        const score = (user != msg.score.player2 ? msg.score.player1 + ":" + msg.score.player2
+            : msg.score.player2 + ":" + msg.score.player1);
+        alert("You loose. Score:" + score)
       }
     }
 
