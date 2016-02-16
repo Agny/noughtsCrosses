@@ -1,18 +1,11 @@
 package ru.agny.zcross
 
-case class Score(playerOne: String, playerTwo: String) {
-
-  private var data = Map[String, Int](playerOne -> 0, playerTwo -> 0)
-
-  def win() = data = data.map(m => if (m._1 == playerOne) m._1 -> (m._2 + 1) else m)
-
-  def loose() = data = data.map(m => if (m._1 == playerTwo) m._1 -> (m._2 + 1) else m)
-
-  def getData = data
+case class Score(data: Map[String, Int]) {
+  def win(winner: String) = Score(
+    data.map(m => if (m._1 == winner) m._1 -> (m._2 + 1) else m)
+  )
 }
 
-object ScoreCompanion {
-  val placeHolder = "UserEmpty"
-
-  def apply(): Score = Score(placeHolder, placeHolder)
+object Score {
+  def apply(): Score = Score(Map.empty)
 }

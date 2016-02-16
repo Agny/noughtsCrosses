@@ -29,7 +29,7 @@ object Graphics extends JFXApp with GraphicsT {
   private var gc: GraphicsContext = null
 
   private def setup() = {
-    context = new GameContext("AI")
+    context = new GameContext()
     AI = new AI(context)
     coordsToCell = mutable.Map.empty[(Int, Int), CellView]
     canvas = new Canvas(borderSide + 100, borderSide + 100)

@@ -5,18 +5,18 @@ import ru.agny.zcross.engine.messages._
 
 import scala.collection.mutable
 
-class GameContext(gameHost: String) extends Actor with akka.actor.ActorLogging {
+class GameContext extends Actor with akka.actor.ActorLogging {
   private val crosses = mutable.MutableList[Cross]()
   private val zeros = mutable.MutableList[Zero]()
-  private val duocr = mutable.MutableList[Line[Cross]]()
-  private val duozr = mutable.MutableList[Line[Zero]]()
+  private val duocr = mutable.MutableList[Line[DisplayCell]]()
+  private val duozr = mutable.MutableList[Line[DisplayCell]]()
 
-  private var score = ScoreCompanion()
+  private var score = Score()
 
   override def receive: Receive = {
     case PlayersReady(playerOne, playerTwo) =>
       log.debug(s"Players are ready: $playerOne vs $playerTwo")
-      score = Score(playerOne, playerTwo)
+      score = Score(Map(playerOne -> 0, playerTwo -> 0))
       context.become(gameStarted)
   }
 
@@ -49,29 +49,38 @@ class GameContext(gameHost: String) extends Actor with akka.actor.ActorLogging {
           d1.checkRelation(d2)
         }
     }
-    var isGameOver = false
-    for (line <- duocr) {
-      if (line.isLongEnough) {
-        isGameOver = true
-        val head = line.values.head
-        val last = line.values.last
-        sender() ! CellLine(CellClick(player, head.x, head.y), CellClick(player, last.x, last.y))
-      }
-    }
-    for (line <- duozr) {
-      if (line.isLongEnough) {
-        isGameOver = true
-        val head = line.values.head
-        val last = line.values.last
-        sender() ! CellLine(CellClick(player, head.x, head.y), CellClick(player, last.x, last.y))
-      }
-    }
-    if (isGameOver) {
-      score.win()
-      sender() ! GameOver(player, score.getData)
-      context.become(receive)
+    val res = (duocr ++ duozr).collectFirst(handleLines(player, getWinLine).andThen(prepareContextChange)).flatten
+    if (res.nonEmpty) {
+      context.become(res.get)
     }
     cell
+  }
+
+  private def handleLines(player: String, f: String => Line[DisplayCell] => Option[CellLine]): PartialFunction[Line[DisplayCell], Option[(Score, GameOver)]] = {
+    case line: Line[DisplayCell] =>
+      f(player)(line).map {
+        case mbLine: CellLine =>
+          score = score.win(player)
+          (score, GameOver(player, score.data))
+      }
+  }
+
+  private def getWinLine(player: String)(line: Line[DisplayCell]): Option[CellLine] = {
+    line.winLine match {
+      case list@(head :: tail) if head != list.last =>
+        Some(CellLine(CellClick(player, head.x, head.y), CellClick(player, tail.last.x, tail.last.y)))
+      case _ => None
+    }
+  }
+
+  private def prepareContextChange(messages: Option[(Score, GameOver)]): Option[Receive] = {
+    messages.flatMap {
+      case (s, g) =>
+        sender() ! s
+        sender() ! g
+        Some(receive)
+      case _ => None
+    }
   }
 
   object Cursor {

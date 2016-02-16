@@ -8,8 +8,8 @@ import ru.agny.zcross.GameContext
 
 import ru.agny.zcross.engine.messages._
 
-class GameRoom(id: Int, gameHost: String, actorSystem: ActorSystem) {
-  private[this] val gameContext = actorSystem.actorOf(Props(classOf[GameContext], gameHost))
+class GameRoom(id: Int, actorSystem: ActorSystem) {
+  private[this] val gameContext = actorSystem.actorOf(Props(classOf[GameContext]))
   private[this] val gameRoomActor = actorSystem.actorOf(Props(classOf[GameRoomActor], id, gameContext))
   private val source = Source.actorRef[Event](bufferSize = 15, OverflowStrategy.dropNew)
 
@@ -53,5 +53,5 @@ class GameRoom(id: Int, gameHost: String, actorSystem: ActorSystem) {
 }
 
 object GameRoom {
-  def apply(id: Int, user: String)(implicit actorSystem: ActorSystem) = new GameRoom(id, user, actorSystem)
+  def apply(id: Int)(implicit actorSystem: ActorSystem) = new GameRoom(id, actorSystem)
 }

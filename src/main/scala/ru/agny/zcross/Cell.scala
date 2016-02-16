@@ -60,11 +60,12 @@ case class Line[A <: Cell](c1: A, c2: A) {
     checkRelation(other.innerLine.head) | checkRelation(other.innerLine.last)
   }
 
-  def isLongEnough = {
-    innerLine.length == maxLength
+  def winLine: List[A] = {
+    if (innerLine.length == maxLength) values
+    else List.empty
   }
 
-  def values = {
+  private def values = {
     innerLine.toList
   }
 
