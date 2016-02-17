@@ -8,4 +8,6 @@ object JsonHandler extends DefaultJsonProtocol {
   implicit val cellClickResult = jsonFormat3(CellClickResult)
   implicit val cellLine = jsonFormat2(CellLine)
   implicit val gameOver = jsonFormat2(GameOver)
+
+  implicit val gameConfig = jsonFormat5(GameConfig)
 }
