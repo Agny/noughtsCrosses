@@ -24,5 +24,9 @@ object IndexService {
           HttpEntity(`application/json`, gameConfig.toJson.compactPrint)
         }
       }
+    } ~ pathPrefix("assets") {
+      encodeResponse {
+        getFromResourceDirectory("js/")
+      }
     }
 }

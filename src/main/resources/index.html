@@ -4,6 +4,7 @@
 <head>
   <meta charset="UTF-8">
   <title>The CreateJs Tutorial</title>
+  <link rel="stylesheet" href="assets/magnific-popup.css">
   <style>
     #background {
       position: absolute;
@@ -11,7 +12,20 @@
       top: 8px;
       pointer-events: none;
     }
+
+    .white-popup {
+      position: relative;
+      background: #FFF;
+      padding: 10px;
+      width: auto;
+      max-width: 200px;
+      margin: 20px auto;
+    }
   </style>
+  <script src="https://code.createjs.com/createjs-2015.11.26.combined.js"></script>
+  <script src="https://code.jquery.com/jquery-2.2.0.min.js"></script>
+  <script src="assets/jquery.magnific-popup.min.js"></script>
+  <!--<script src="https://code.createjs.com/createjs-2015.11.26.js"></script>-->
   <script type="text/javascript">
     "use strict";
 
@@ -22,28 +36,43 @@
     const formatSplitBy = "-";
     const cells = {};
 
+    let config;
     let cellSide;
     let main;
     let background;
     let board;
 
-    function loadConfigAndInit() {
-      fetch(configUrl).then(function(resp) {
+    function loadConfig() {
+      fetch(configUrl).then(function (resp) {
         return resp.json();
-      }).then(function(json) {
-        init(json)
+      }).then(function (json) {
+        config = json;
+        showPopup("#start-dialog");
       });
     }
 
-    function init(config) {
+    function showPopup(id) {
+      $.magnificPopup.open({
+        items: {
+          src: $(id) // can be a HTML string, jQuery object, or CSS selector
+        },
+        focus: '#name',
+        type: 'inline',
+        modal: true
+      });
+    }
+
+    function init(user, room) {
       const borderSide = config.borderSide;
       const boardSize = config.boardSize;
+      const host = config.host;
+      const port = config.port;
       cellSide = Math.floor(borderSide / boardSize);
       main = new createjs.Stage("main");
       background = new createjs.Stage("background");
       board = new createjs.Shape();
       board.name = backShapeName;
-      board.graphics.drawRect(0, 0, 500, 500);
+      board.graphics.drawRect(0, 0, borderSide, borderSide);
       background.addChild(board);
       background.addEventListener("click", function (e) {
         background.removeAllEventListeners("click");
@@ -52,13 +81,11 @@
       createjs.Ticker.setFPS(50);
       createjs.Ticker.addEventListener("tick", main);
 
-      setup(main, boardSize, borderSide)
+      setup(main, boardSize, borderSide, host, port, user, room)
     }
 
-    function setup(mainStage, boardSize, borderSide) {
-      const user = "player1";
-      const room = 1;
-      const socket = new WebSocket("ws://192.168.1.34:8080/game/" + room + "?name=" + user);
+    function setup(mainStage, boardSize, borderSide, wshost, wsport, user, room) {
+      const socket = new WebSocket("ws://" + wshost + ":" + wsport + "/game/" + room + "?name=" + user);
       socket.onmessage = function (e) {
         const msg = JSON.parse(e.data);
         switch (msg.type) {
@@ -160,8 +187,12 @@
     }
 
     function drawPopup(msg, user) {
-      const score = (user == msg.score.player2 ? msg.score.player2 + ":" + msg.score.player1
-          : msg.score.player1 + ":" + msg.score.player2);
+      let players = [];
+      for (let player in msg.score) {
+        players.push(player);
+      }
+      const score = (user == players[0] ? msg.score[players[0]] + ":" + msg.score[players[1]]
+          : msg.score[players[1]] + ":" + msg.score[players[0]]);
       if (msg.winner == user) {
         alert("You win. Score:" + score)
       } else {
@@ -189,12 +220,29 @@
     function lineBoundsShift(length, baseShift) {
       return Math.pow(-1, length) * baseShift;
     }
+
+    $(document).on("click", ".popup-modal-dismiss", function (e) {
+      $.magnificPopup.close();
+      const user = $("#name").val();
+      const room = $("#room").val();
+      init(user, room);
+    });
   </script>
 </head>
-<body onload="loadConfigAndInit();">
-<canvas id="main" width="700" height="700"></canvas>
-<canvas id="background" width="700" height="700"></canvas>
-<script src="https://code.createjs.com/createjs-2015.11.26.combined.js"></script>
-<!--<script src="https://code.createjs.com/createjs-2015.11.26.js"></script>-->
+<body onload="loadConfig();">
+<canvas id="main" width="800" height="800"></canvas>
+<canvas id="background" width="800" height="800"></canvas>
+<div id="start-dialog" class="white-popup mfp-hide">
+  <form id="user-dialog">
+    <fieldset style="border:0;">
+      <label for="name">Name</label>
+      <input id="name" name="name" type="text" placeholder="Divanov">
+      </br>
+      <label for="room">Game room</label>
+      <input id="room" name="room" type="number" placeholder="1">
+      <p><a class="popup-modal-dismiss" href="#">Start</a></p>
+    </fieldset>
+  </form>
+</div>
 </body>
 </html>

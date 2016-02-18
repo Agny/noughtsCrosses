@@ -56,12 +56,12 @@ class GameContext extends Actor with akka.actor.ActorLogging {
     cell
   }
 
-  private def handleLines(player: String, f: String => Line[DisplayCell] => Option[CellLine]): PartialFunction[Line[DisplayCell], Option[(Score, GameOver)]] = {
+  private def handleLines(player: String, f: String => Line[DisplayCell] => Option[CellLine]): PartialFunction[Line[DisplayCell], Option[(CellLine, GameOver)]] = {
     case line: Line[DisplayCell] =>
       f(player)(line).map {
         case mbLine: CellLine =>
           score = score.win(player)
-          (score, GameOver(player, score.data))
+          (mbLine, GameOver(player, score.data))
       }
   }
 
@@ -73,10 +73,10 @@ class GameContext extends Actor with akka.actor.ActorLogging {
     }
   }
 
-  private def prepareContextChange(messages: Option[(Score, GameOver)]): Option[Receive] = {
+  private def prepareContextChange(messages: Option[(CellLine, GameOver)]): Option[Receive] = {
     messages.flatMap {
-      case (s, g) =>
-        sender() ! s
+      case (l, g) =>
+        sender() ! l
         sender() ! g
         Some(receive)
       case _ => None
