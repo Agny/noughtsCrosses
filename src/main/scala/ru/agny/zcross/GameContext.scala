@@ -18,6 +18,9 @@ class GameContext extends Actor with akka.actor.ActorLogging {
       log.debug(s"Players are ready: $playerOne vs $playerTwo")
       score = Score(Map(playerOne -> 0, playerTwo -> 0))
       context.become(gameStarted)
+    case PlayerContinue(player) =>
+      log.debug(s"Next game. $score")
+      context.become(gameStarted)
   }
 
   def gameStarted: Receive = {
@@ -51,13 +54,14 @@ class GameContext extends Actor with akka.actor.ActorLogging {
     }
     val res = (duocr ++ duozr).collectFirst(handleLines(player, getWinLine).andThen(prepareContextChange)).flatten
     if (res.nonEmpty) {
+      clear()
       context.become(res.get)
     }
     cell
   }
 
   private def handleLines(player: String, f: String => Line[DisplayCell] => Option[CellLine]): PartialFunction[Line[DisplayCell], Option[(CellLine, GameOver)]] = {
-    case line: Line[DisplayCell] =>
+    case line: Line[DisplayCell] if f(player)(line).nonEmpty =>
       f(player)(line).map {
         case mbLine: CellLine =>
           score = score.win(player)
@@ -81,6 +85,13 @@ class GameContext extends Actor with akka.actor.ActorLogging {
         Some(receive)
       case _ => None
     }
+  }
+
+  private def clear(): Unit = {
+    crosses.clear()
+    zeros.clear()
+    duocr.clear()
+    duozr.clear()
   }
 
   object Cursor {

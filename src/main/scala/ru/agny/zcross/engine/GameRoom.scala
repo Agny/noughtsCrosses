@@ -20,7 +20,12 @@ class GameRoom(id: Int, actorSystem: ActorSystem) {
 
     val fromWebsocket = b.add(
       Flow[Message].collect({
-        case TextMessage.Strict(txt) => txt.parseJson.convertTo[CellClick]
+        case TextMessage.Strict(txt) =>
+          val msg = txt.parseJson.convertTo[WSMessage]
+          msg match {
+            case x:WSMessage if x.tpe == "cellClick" => x.msg.parseJson.convertTo[CellClick]
+            case x:WSMessage if x.tpe == "continue" => x.msg.parseJson.convertTo[PlayerContinue]
+          }
       })
     )
     val backToWebsocket = b.add(
@@ -33,6 +38,9 @@ class GameRoom(id: Int, actorSystem: ActorSystem) {
           TextMessage(resp)
         case msg@GameOver(winner, score) =>
           val resp = (msg.toJson.asJsObject.fields + ("type" -> JsString("result"))).toJson.toString()
+          TextMessage(resp)
+        case msg@PlayerLeft(p) =>
+          val resp = (msg.toJson.asJsObject.fields + ("type" -> JsString("gameOver"))).toJson.toString()
           TextMessage(resp)
         case msg@_ =>
           println(msg)

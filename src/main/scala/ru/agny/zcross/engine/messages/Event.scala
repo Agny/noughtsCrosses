@@ -9,6 +9,7 @@ sealed trait SystemEvent extends Event
 case class PlayerJoined(user: String, actor: ActorRef) extends SystemEvent
 case class PlayerLeft(user: String) extends SystemEvent
 case class PlayersReady(playerOne: String, playerTwo: String) extends SystemEvent
+case class PlayerContinue(user:String) extends SystemEvent
 
 case class CellClick(player: String, x: Int, y: Int) extends GameEvent
 case class CellClickResult(x: Int, y: Int, v: String) extends GameEvent

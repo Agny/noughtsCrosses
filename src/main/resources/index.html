@@ -36,8 +36,14 @@
     const formatSplitBy = "-";
     const cells = {};
 
+    let socket;
     let config;
+    let user;
+
+    let borderSide;
+    let boardSize;
     let cellSide;
+
     let main;
     let background;
     let board;
@@ -47,8 +53,37 @@
         return resp.json();
       }).then(function (json) {
         config = json;
+        borderSide = config.borderSide;
+        boardSize = config.boardSize;
         showPopup("#start-dialog");
       });
+    }
+
+    function openNewSocket(room, user) {
+      const wshost = config.host;
+      const wsport = config.port;
+      socket = new WebSocket("ws://" + wshost + ":" + wsport + "/game/" + room + "?name=" + user);
+      socket.onmessage = function (e) {
+        const msg = JSON.parse(e.data);
+        switch (msg.type) {
+          case "cell":
+            drawCellValue(msg);
+            break;
+          case "line":
+            drawLine(msg.from, msg.to);
+            break;
+          case "result":
+            drawPopup(msg, user);
+            break;
+          case "gameOver":
+            drawRedirect();
+            break;
+        }
+      };
+    }
+
+    function sendViaSocket(jsonMsg) {
+      socket.send(jsonMsg);
     }
 
     function showPopup(id) {
@@ -62,11 +97,7 @@
       });
     }
 
-    function init(user, room) {
-      const borderSide = config.borderSide;
-      const boardSize = config.boardSize;
-      const host = config.host;
-      const port = config.port;
+    function init() {
       cellSide = Math.floor(borderSide / boardSize);
       main = new createjs.Stage("main");
       background = new createjs.Stage("background");
@@ -79,46 +110,33 @@
         background.dispatchEvent(e);
       });
       createjs.Ticker.setFPS(50);
+      background.update(); //clear background before new game
       createjs.Ticker.addEventListener("tick", main);
-
-      setup(main, boardSize, borderSide, host, port, user, room)
     }
 
-    function setup(mainStage, boardSize, borderSide, wshost, wsport, user, room) {
-      const socket = new WebSocket("ws://" + wshost + ":" + wsport + "/game/" + room + "?name=" + user);
-      socket.onmessage = function (e) {
-        const msg = JSON.parse(e.data);
-        switch (msg.type) {
-          case "cell":
-            drawCellValue(msg);
-            break;
-          case "line":
-            drawLine(msg.from, msg.to);
-            break;
-          case "result":
-            drawPopup(msg, user);
-            break;
-        }
-      };
-      const cells = generateCells(borderSide);
+    function setup(user) {
+      const cells = generateCells();
       for (let x = 0; x < boardSize; x++) {
         for (let y = 0; y < boardSize; y++) {
           const c = cells[getAddress(x, y)];
           c.addEventListener("click", function (e) {
             const container = e.currentTarget;
             const xy = container.name.split(formatSplitBy);
-            socket.send(JSON.stringify({
-              player: user,
-              x: parseInt(xy[0]),
-              y: parseInt(xy[1])
+            sendViaSocket(JSON.stringify({
+              tpe: "cellClick",
+              msg: JSON.stringify({
+                player: user,
+                x: parseInt(xy[0]),
+                y: parseInt(xy[1])
+              })
             }));
           });
-          mainStage.addChild(c)
+          main.addChild(c)
         }
       }
     }
 
-    function generateCells(borderSide) {
+    function generateCells() {
       for (let x = 1; x < borderSide; x += cellSide) {
         for (let y = 1; y < borderSide; y += cellSide) {
           const cell = new createjs.Container();
@@ -151,12 +169,14 @@
       draw();
 
       function draw() {
-        const scale = 12;
+        const scale = 20 - boardSize;
+        const scaleX = Math.floor(cellSide / text.getMeasuredWidth());
+        const scaleY = Math.floor(cellSide / text.getMeasuredHeight());
         const tweenCfg = {
-          x: (cellSide - text.getMeasuredWidth() * scale) / 2,
-          y: (cellSide - text.getMeasuredHeight() * (scale + 1)) / 2,
-          scaleX: scale,
-          scaleY: scale
+          x: 0,
+          y: 0,
+          scaleX: scaleX,
+          scaleY: scaleY
         };
         createjs.Tween.get(text).to(tweenCfg, 200)
       }
@@ -193,11 +213,17 @@
       }
       const score = (user == players[0] ? msg.score[players[0]] + ":" + msg.score[players[1]]
           : msg.score[players[1]] + ":" + msg.score[players[0]]);
+      const scoreField = $("#continue-dialog").find("#score");
       if (msg.winner == user) {
-        alert("You win. Score:" + score)
+        scoreField.text("You win. Score:" + score);
       } else {
-        alert("You loose. Score:" + score)
+        scoreField.text("You loose. Score:" + score);
       }
+      showPopup("#continue-dialog");
+    }
+
+    function drawRedirect() {
+      showPopup("#end-dialog");
     }
 
     function getCenter(coordinate) {
@@ -221,11 +247,26 @@
       return Math.pow(-1, length) * baseShift;
     }
 
-    $(document).on("click", ".popup-modal-dismiss", function (e) {
+    $(document).on("click", "#start-dialog .popup-modal-dismiss", function (e) {
       $.magnificPopup.close();
       const user = $("#name").val();
       const room = $("#room").val();
-      init(user, room);
+      openNewSocket(room, user);
+      init();
+      setup(user);
+    });
+
+    $(document).on("click", "#continue-dialog .popup-modal-dismiss", function (e) {
+      $.magnificPopup.close();
+      const user = $("#name").val();
+      sendViaSocket(JSON.stringify({
+        tpe: "continue",
+        msg: JSON.stringify({
+          user: user
+        })
+      }));
+      init();
+      setup(user);
     });
   </script>
 </head>
@@ -233,7 +274,7 @@
 <canvas id="main" width="800" height="800"></canvas>
 <canvas id="background" width="800" height="800"></canvas>
 <div id="start-dialog" class="white-popup mfp-hide">
-  <form id="user-dialog">
+  <form>
     <fieldset style="border:0;">
       <label for="name">Name</label>
       <input id="name" name="name" type="text" placeholder="Divanov">
@@ -243,6 +284,14 @@
       <p><a class="popup-modal-dismiss" href="#">Start</a></p>
     </fieldset>
   </form>
+</div>
+<div id="continue-dialog" class="white-popup mfp-hide">
+  <p id="score"></p>
+  <p><a class="popup-modal-dismiss" href="#">Again</a></p>
+</div>
+<div id="end-dialog" class="white-popup mfp-hide">
+  <p>Your opponent has left</p>
+  <p><a class="popup-modal-dismiss" href="#" onclick="location.reload()">New game</a></p>
 </div>
 </body>
 </html>
