@@ -4,7 +4,7 @@ import ru.agny.zcross.utils.PropertiesHolder
 
 import scala.collection.mutable
 
-class Cell(x: Int, y: Int) extends CellView(x, y) {
+class Cell(val x: Int, val y: Int) {
   private lazy val adjacent = {
     val r1 = Range(x - 1, x + 2)
     val r2 = Range(y - 1, y + 2)

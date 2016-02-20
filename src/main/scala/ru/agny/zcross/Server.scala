@@ -22,7 +22,7 @@ object Server extends App {
     Http().bindAndHandle(IndexService.route, httpHost, httpPort),
     Http().bindAndHandle(GameService.route, wsHost, wsPort)
   )
-  println(s"Server is now online\nPress RETURN to stop...")
+  println(s"Server is now online\nPress any key to stop...")
   StdIn.readLine()
 
   import actorSystem.dispatcher

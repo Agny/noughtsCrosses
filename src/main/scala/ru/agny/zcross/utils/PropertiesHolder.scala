@@ -22,4 +22,4 @@ object PropertiesHolder {
 
 }
 
-case class GameConfig(borderSide: Int, boardSize: Int, lineSize: Int, host:String, port:Int)
+case class GameConfig(borderSide: Int, boardSize: Int, lineSize: Int, host: String, port: Int)

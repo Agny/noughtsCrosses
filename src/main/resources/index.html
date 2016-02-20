@@ -53,7 +53,7 @@
         return resp.json();
       }).then(function (json) {
         config = json;
-        borderSide = config.borderSide;
+        borderSide = config.borderSide + pixelBorder * 2;
         boardSize = config.boardSize;
         showPopup("#start-dialog");
       });
@@ -271,8 +271,8 @@
   </script>
 </head>
 <body onload="loadConfig();">
-<canvas id="main" width="800" height="800"></canvas>
-<canvas id="background" width="800" height="800"></canvas>
+<canvas id="main" width="900" height="900"></canvas>
+<canvas id="background" width="900" height="900"></canvas>
 <div id="start-dialog" class="white-popup mfp-hide">
   <form>
     <fieldset style="border:0;">
