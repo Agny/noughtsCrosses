@@ -29,7 +29,7 @@
   <script type="text/javascript">
     "use strict";
 
-    const configUrl = "http://localhost:8080/config.json";
+    const configUrl = "http://" + window.location.hostname + ":" + location.port + "/config.json";
     const backShapeName = "backShape";
     const pixelBorder = 0.5;
     const lineAppendix = 20;
